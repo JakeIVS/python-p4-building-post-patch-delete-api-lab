@@ -30,17 +30,77 @@ def bakeries():
     )
     return response
 
-@app.route('/bakeries/<int:id>')
+@app.route('/bakeries/<int:id>', methods = ['GET','PATCH'])
 def bakery_by_id(id):
 
     bakery = Bakery.query.filter_by(id=id).first()
-    bakery_serialized = bakery.to_dict()
+    
+    if request.method == 'GET':
+        bakery_serialized = bakery.to_dict()
 
-    response = make_response(
-        bakery_serialized,
-        200
-    )
-    return response
+        response = make_response(
+            bakery_serialized,
+            200
+        )
+        return response
+    elif request.method == 'PATCH':
+        for attr in request.form:
+            setattr(bakery, attr, request.form.get(attr))
+        db.session.add(bakery)
+        db.session.commit()
+        response = make_response(
+            bakery.to_dict(),
+            200
+        )
+        return response
+
+@app.route('/baked_goods', methods= ['GET', 'POST'])
+def baked_goods():
+    if request.method == 'GET':
+        baked_goods = BakedGood.query.all()
+        baked_goods_serialized = [good.to_dict() for good in baked_goods]
+        response = make_response(
+            baked_goods_serialized,
+            200
+        )
+        return response
+    elif request.method == 'POST':
+        new_good = BakedGood(
+            name=request.form.get('name'),
+            price=request.form.get('price'),
+            bakery_id=request.form.get('bakery_id')
+        )
+        db.session.add(new_good)
+        db.session.commit()
+        response = make_response(
+            new_good.to_dict(),
+            201
+        )
+        return response
+    
+@app.route('/baked_goods/<int:id>', methods= ['GET','DELETE'])
+def baked_good_by_id(id):
+
+    bg = BakedGood.query.filter(BakedGood.id == id).first()
+
+    if request.method == 'GET':
+        response = make_response(
+            bg.to_dict(),
+            200
+        )
+        return response
+    elif request.method == 'DELETE':
+        db.session.delete(bg)
+        db.session.commit()
+        response_body = {
+            'delete_successful': True,
+            'message': 'Baked good deleted successfully.'
+        }
+        response = make_response(
+            response_body,
+            200
+        )
+        return response
 
 @app.route('/baked_goods/by_price')
 def baked_goods_by_price():
